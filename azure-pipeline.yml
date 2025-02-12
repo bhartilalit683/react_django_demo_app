@@ -1,55 +1,53 @@
 trigger:
   branches:
     include:
-      - main  # The branch you want to deploy from
+      - main  # Replace with your default branch name if different
 
 pool:
-  name: 'agentpool'  # Your self-hosted agent pool
+  name: 'agentpool'  # Use your self-hosted agent pool name here
 
 jobs:
   - job: BuildAndDeploy
-    displayName: 'Build and Deploy React-Django App'
+    displayName: 'Build React and Django, Deploy to NGINX'
     steps:
-      - checkout: self  # Checkout the repository
-
-      # Install Node.js for React app build
-      - task: NodeTool@0
-        inputs:
-          versionSpec: '14.x'
-          addToPath: true
-
-      # Install React dependencies and build the app
-      - script: |
-          cd frontend
-          npm install
-          npm run build
-        displayName: 'Build React App'
-
-      # Install Python and create a virtual environment for Django
+      
       - task: UsePythonVersion@0
         inputs:
           versionSpec: '3.x'
           addToPath: true
 
-      # Install Django dependencies
+      - task: NodeTool@0
+        inputs:
+          versionSpec: '16.x'  # Use the version that fits your application
+          
+      - checkout: self
+
+      # Step 1: Build React App
       - script: |
-          cd backend
+          cd react_django_demo_app  # Replace with your React app directory path
+          npm install
+          npm run build
+        displayName: 'Build React App'
+
+      # Step 2: Prepare Django (Install dependencies and run migrations)
+      - script: |
+          cd react_django_demo_app  # Replace with your Django app directory path
           python -m venv venv
           source venv/bin/activate
           pip install -r requirements.txt
-        displayName: 'Install Django Dependencies'
+          python manage.py migrate  # Run migrations
+        displayName: 'Prepare Django App'
 
-      # Run Django tests (optional)
+      # Step 3: Deploy to NGINX
       - script: |
-          cd backend
-          source venv/bin/activate
-          python manage.py test
-        displayName: 'Run Django Tests'
+          # Assuming the NGINX server is already configured for both React and Django
+          ssh -o StrictHostKeyChecking=no ubuntu@your_server_ip 'mkdir -p /var/www/react_django_demo_app'
+          scp -r react-app/build/* ubuntu@ip-172-31-81-47:/var/www/react-app/
 
-      # Collect static files for Django (for production)
-      - script: |
-          cd backend
-          source venv/bin/activate
-          python manage.py collectstatic --noinput
-        displayName: 'Collect Static Files for Django'
+          # Copy the Django app files (static files, etc.)
+          scp -r django-app/static/* ubuntu@ip-172-31-81-47:/var/www//static/
+
+          # Restart NGINX after deploying new files
+          ssh ubuntu@your_server_ip 'sudo systemctl restart nginx'
+        displayName: 'Deploy to NGINX'
 
