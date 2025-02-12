@@ -4,9 +4,7 @@ trigger:
       - main  # The branch you want to deploy from
 
 pool:
-  name: 'Default'  # Your self-hosted agent pool
-  demands:
-    - agent.os == 'Linux'  # Make sure the agent is running Linux
+  name: 'agentpool'  # Your self-hosted agent pool
 
 jobs:
   - job: BuildAndDeploy
